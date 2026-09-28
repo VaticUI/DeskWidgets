@@ -90,6 +90,16 @@ core.init()
 # fictional data only: no personal folder, no guessed location
 kinds.Photos.defaults = {"folder": os.path.join(sys.argv[2], "no-photos"), "minutes": 1440}
 kinds.Weather.defaults = {"city": "Paris"}
+kinds.SSH.defaults = {"profiles": []}
+import ssh
+SERVERS = [ssh.new_profile(name="prod-web", host="203.0.113.10", user="deploy"),
+           ssh.new_profile(name="database", host="203.0.113.21", user="admin", port=2222),
+           ssh.new_profile(name="Raspberry Pi", host="192.168.1.44", user="pi"),
+           ssh.new_profile(name="backup", host="198.51.100.7", user="root"),
+           ssh.new_profile(name="game-server", host="198.51.100.30", user="steam")]
+for srv, ms in zip(SERVERS, (24.0, 31.0, 3.0, None, 48.0)):
+    key = (srv["host"], int(srv["port"]))
+    ssh._status[key], ssh._checked[key] = ms, time.time() + 10**9   # fictional status, never pinged
 
 
 class Host(QWidget):
@@ -130,6 +140,10 @@ def build():
                                           {"text": "Water the plants", "done": True},
                                           {"text": "Send the invoice", "done": False}]),
         "cal_l": make("calendar"),
+        "ssh_s": make("ssh", profiles=SERVERS), "ssh_m": make("ssh", profiles=SERVERS),
+        "ssh_l": make("ssh", profiles=SERVERS),
+        "rem_s": make("reminders", items=[{"text": "Book the dentist", "done": False},
+                                          {"text": "Send the invoice", "done": False}]),
     }
 
 
@@ -158,6 +172,7 @@ def desktop(dark, path):
         ("photos_s", "small", 1600 - 40 - 364 - G - 170, 40), ("system_s", "small", 1600 - 40 - 364 - G - 170, 40 + 170 + G),
         ("notes_s", "small", 1600 - 40 - 364 - G - 170, 40 + 2 * (170 + G)),
         ("clock_m", "medium", 40, 40), ("cal_m", "medium", 40, 40 + 170 + G),
+        ("ssh_m", "medium", 40, 40 + 2 * (170 + G)),
     ]
     for key, size, x, y in layout:
         w, h = core.SIZES[size]
@@ -171,10 +186,11 @@ def grid(path, dark=True):
     rows = [[("clock_s", "small"), ("clock_m", "medium"), ("cal_s", "small"), ("cal_m", "medium")],
             [("weather_s", "small"), ("weather_m", "medium"), ("music_s", "small"), ("music_m", "medium")],
             [("system_s", "small"), ("system_m", "medium"), ("notes_s", "small"), ("notes_m", "medium")],
-            [("cal_l", "large"), ("weather_l", "large"), ("photos_l", "large"), ("rem_m", "large")]]
+            [("ssh_s", "small"), ("ssh_m", "medium"), ("rem_s", "small"), ("photos_m", "medium")],
+            [("cal_l", "large"), ("weather_l", "large"), ("ssh_l", "large"), ("rem_m", "large")]]
     G = 24
     width = 40 + 2 * (170 + G) + 2 * (364 + G) + 16
-    height = 40 + 3 * (170 + G) + 384 + 40
+    height = 40 + 4 * (170 + G) + 384 + 40
     width = max(width, 40 + 4 * (364 + G) + 16)
     wp = wallpaper(width, height, dark)
     core.backdrop.screens = [(QRect(0, 0, width, height), core.blur_image(wp))]

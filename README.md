@@ -29,6 +29,7 @@ They blend into your wallpaper with a frosted-glass look and stay under your win
 - [Run from source](#run-from-source)
 - [Build the executable](#build-the-executable)
 - [How it works](#how-it-works)
+- [SSH widget](#ssh-widget)
 - [Add your own widget](#add-your-own-widget)
 - [Privacy](#privacy)
 - [Known limitations](#known-limitations)
@@ -36,7 +37,7 @@ They blend into your wallpaper with a frosted-glass look and stay under your win
 
 ## Features
 
-- 🧩 **8 widgets**, each in up to three sizes (small, medium, large), as many as you like.
+- 🧩 **9 widgets**, each in up to three sizes (small, medium, large), as many as you like.
 - 🪟 **On the desktop itself**: always under your windows, and still visible with **Win+D** (show desktop).
 - 🧊 **Frosted glass**: each widget shows your blurred wallpaper behind it, with a soft shadow.
 - 🌗 **Light and dark mode**: follows the Windows setting automatically.
@@ -64,6 +65,22 @@ They blend into your wallpaper with a frosted-glass look and stay under your win
 | 📝 **Notes** | Small, Medium, Large | A sticky note you write on right from the desktop. Yellow, pink, green, blue or glass. |
 | 🖼️ **Photos** | Small, Medium, Large | A slideshow of a folder (your Pictures folder by default). Double-click opens the photo. |
 | ✅ **Reminders** | Small, Medium, Large | A to-do list: tick to complete, **+** to add. |
+| 🖥️ **SSH** | Small, Medium, Large | Your SSH servers with their status (online / offline, latency). Click one to open a session. See [SSH widget](#ssh-widget). |
+
+## SSH widget
+
+Connect to your servers in one click, straight from the desktop.
+
+- **Profiles**: right-click the widget → **Edit "SSH"…** (or click its **+**) to add servers: name, host, port, user,
+  private key (optional) and extra `ssh` options (e.g. `-L 8080:localhost:80` for a tunnel).
+- **Import**: **Import ~/.ssh/config** adds the named hosts of your OpenSSH config (host name, user, port, key).
+  A new SSH widget starts with them automatically.
+- **Status**: every 30 seconds, each server's SSH port is checked: green dot and latency when it answers, red when it doesn't.
+- **Connect**: click a server. The session opens in a new **Windows Terminal** tab, or in a console window if
+  Windows Terminal is not installed. It uses the Windows OpenSSH client (`ssh.exe`).
+- **Passwords are never stored**: `ssh` asks for them in the terminal, or uses your key / `ssh-agent`.
+
+If `ssh.exe` is missing, install **OpenSSH Client** from Settings → System → Optional features.
 
 ## Installation
 
@@ -158,6 +175,7 @@ The executable is created in `dist\DeskWidgets.exe`.
 - **Music**: the Windows API `GlobalSystemMediaTransportControlsSessionManager` (via [PyWinRT](https://github.com/pywinrt/pywinrt)),
   the same source as the Windows volume flyout.
 - **System**: [psutil](https://github.com/giampaolo/psutil).
+- **SSH**: a TCP connection to each server's SSH port for the status, then the Windows OpenSSH client in Windows Terminal.
 - **Settings**: saved in `%APPDATA%\DeskWidgets\config.json`.
 
 | File | Role |
@@ -167,6 +185,7 @@ The executable is created in `dist\DeskWidgets.exe`.
 | `kinds.py` | The widgets |
 | `services.py` | Shared data sources, refreshed in the background |
 | `gallery.py` | The widget gallery |
+| `ssh.py` | SSH profiles, `~/.ssh/config` import, status checks, opening sessions, profile editor |
 | `tools/screenshots.py` | Renders the images of this README (with fictional data) |
 
 ## Add your own widget
@@ -193,12 +212,14 @@ class Hello(Kind):
 ```
 
 It then appears in the gallery. Return a brush from `background()` for a custom background instead of the frosted glass,
-and override `click()` / `on_hit()` for interactions.
+override `click()` / `on_hit()` for interactions, and set `custom_settings = True` with an `edit_settings()` method for a settings dialog of your own.
 
 ## Privacy
 
 - Nothing is collected. Your notes, reminders and settings stay in `%APPDATA%\DeskWidgets`.
 - The weather widget contacts Open-Meteo, and ipwho.is only if no city is set (to guess your location from your IP address).
+- The SSH widget only connects to your own servers (a TCP check of the SSH port). SSH profiles are stored without any
+  password; private keys stay where they are, only their path is saved.
 - The screenshots in this README use fictional data only.
 
 ## Known limitations

@@ -21,25 +21,25 @@ class _Bg(QObject):
         super().__init__()
         self.call.connect(lambda f: f())
 
-    def run(self, fn, done):
+    def run(self, fn, done, pool=None):
         def work():
             try:
                 r, err = fn(), None
             except Exception as e:
                 r, err = None, e
             self.call.emit(lambda: done(r, err))
-        _pool.submit(work)
+        (pool or _pool).submit(work)
 
 
 _bg = None
 _http = None
 
 
-def bg(fn, done):
+def bg(fn, done, pool=None):
     global _bg
     if _bg is None:
         _bg = _Bg()
-    _bg.run(fn, done)
+    _bg.run(fn, done, pool)
 
 
 def http():

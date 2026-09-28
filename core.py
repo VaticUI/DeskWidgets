@@ -560,7 +560,7 @@ class WidgetWindow(QWidget):
                 a.triggered.connect(lambda _=False, s=s: self.set_size(s))
                 m.addAction(a)
             m.addSeparator()
-        if self.kind.settings_fields():
+        if self.kind.settings_fields() or self.kind.custom_settings:
             a = m.addAction(f"Edit \"{self.kind.title}\"…")
             a.triggered.connect(self.edit_settings)
         m.addAction("Remove widget").triggered.connect(lambda: self.manager.remove(self))
@@ -576,6 +576,12 @@ class WidgetWindow(QWidget):
         self.update()
 
     def edit_settings(self):
+        if self.kind.custom_settings:          # the kind has its own dialog
+            if self.kind.edit_settings():
+                self.kind.settings_changed()
+                self.manager.config.save()
+                self.update()
+            return
         dlg = SettingsDialog(self.kind.title, self.kind.settings_fields(), self.kind.s)
         if dlg.exec():
             self.kind.s.update(dlg.values())

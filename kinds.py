@@ -42,6 +42,7 @@ class Kind:
     sizes = ("small", "medium", "large")
     interval = 1000          # ms between refreshes
     defaults = {}
+    custom_settings = False  # True: edit_settings() opens the kind's own dialog
 
     def __init__(self, host, settings, preview=False):
         self.host = host
@@ -90,6 +91,10 @@ class Kind:
 
     def settings_changed(self):
         pass
+
+    def edit_settings(self):
+        """Only with custom_settings: show the dialog, return True if something changed."""
+        return False
 
     # child widgets (notes editor, reminders input)
     def layout_children(self, card, size):
@@ -1099,5 +1104,135 @@ class Reminders(Kind):
                 f"color:rgb({c.red()},{c.green()},{c.blue()});font-size:13px;}}")
 
 
-KINDS = [Clock, Calendar, Weather, Music, System, Notes, Photos, Reminders]
+# --------------------------------------------------------------------------- #
+#  SSH
+# --------------------------------------------------------------------------- #
+class SSH(Kind):
+    id = "ssh"
+    title = "SSH"
+    desc = "Your SSH servers, online or not: click one to open a session in the terminal."
+    icon = "🖥️"
+    custom_settings = True
+    interval = 2000
+    defaults = {"profiles": lambda: __import__("ssh").read_ssh_config()}
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.opened = (None, 0.0)
+        self.tick()
+
+    @property
+    def profiles(self):
+        return self.s["profiles"]
+
+    def tick(self):
+        import ssh
+        ssh.refresh(self.profiles, self.update)
+
+    def settings_changed(self):
+        import ssh
+        ssh.refresh(self.profiles, self.update, force=True)
+
+    def edit_settings(self):
+        import ssh
+        dlg = ssh.ProfilesDialog(self.profiles)
+        if dlg.exec():
+            self.s["profiles"] = dlg.result_profiles()
+            return True
+        return False
+
+    def on_hit(self, name):
+        if self.preview:
+            return
+        if name == "add":
+            if self.edit_settings():
+                self.settings_changed()
+                self.host.manager.config.save()
+        elif name.startswith("row"):
+            import ssh
+            i = int(name[3:])
+            self.opened = (i, time.time())
+            ssh.connect(self.profiles[i])
+        self.update()
+
+    def paint(self, p, r, size):
+        self.hits = {}
+        x = r.left() + 16
+        profiles = self.profiles
+        import ssh
+        online = sum(1 for q in profiles if ssh.status(q["host"], q.get("port")) not in (None, "?"))
+        # header: terminal icon, title, count
+        icon = QRectF(x, r.top() + 14, 30, 30)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(28, 28, 30))
+        p.drawRoundedRect(icon, 8, 8)
+        p.setPen(GREEN)
+        p.setFont(QFont("Cascadia Mono, Consolas", 11, QFont.Bold))
+        p.drawText(icon, Qt.AlignCenter, ">_")
+        p.setPen(self.fg)
+        p.setFont(font(15, QFont.Bold))
+        p.drawText(QRectF(x + 40, r.top() + 12, 120, 18), Qt.AlignLeft, "SSH")
+        p.setPen(self.fg2)
+        p.setFont(font(11, QFont.DemiBold))
+        p.drawText(QRectF(x + 40, r.top() + 30, 140, 16), Qt.AlignLeft,
+                   f"{online} of {len(profiles)} online" if profiles else "No servers")
+        plus = QRectF(r.right() - 16 - 26, r.top() + 16, 26, 26)
+        self.hits["add"] = plus
+        if self.hot == "add":
+            p.setPen(Qt.NoPen)
+            p.setBrush(self.fg3)
+            p.drawEllipse(plus.center(), 13, 13)
+        p.setPen(GREEN)
+        p.setFont(font(22))
+        p.drawText(plus.adjusted(0, -2, 0, -2), Qt.AlignCenter, "+")
+
+        top = r.top() + 56
+        rh = {"small": 26, "medium": 28}.get(size, 30)
+        rows = int((r.bottom() - 10 - top) // rh)
+        if not profiles:
+            p.setPen(self.fg2)
+            p.setFont(font(12))
+            p.drawText(QRectF(x, top, r.width() - 32, r.bottom() - top - 12), Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap,
+                       "Click + to add a server,\nor import ~/.ssh/config.")
+            return
+        if len(profiles) > rows:
+            rows = int((r.bottom() - 24 - top) // rh)     # room for "+ N more"
+        for i, q in enumerate(profiles[:rows]):
+            row = QRectF(r.left() + 8, top + i * rh, r.width() - 16, rh)
+            self.hits[f"row{i}"] = row
+            if self.hot == f"row{i}":
+                p.setPen(Qt.NoPen)
+                p.setBrush(self.fg3)
+                p.drawRoundedRect(row, 8, 8)
+            st = ssh.status(q["host"], q.get("port"))
+            dot = QColor(142, 142, 147) if st == "?" else (GREEN if st is not None else RED)
+            p.setPen(Qt.NoPen)
+            p.setBrush(dot)
+            p.drawEllipse(QPointF(row.left() + 12, row.center().y()), 4.5, 4.5)
+            name = q.get("name") or q["host"]
+            tx = row.left() + 24
+            right = row.right() - 8
+            if size != "small":
+                opening = self.opened[0] == i and time.time() - self.opened[1] < 3
+                lat = "opening…" if opening else ("…" if st == "?" else ("offline" if st is None else f"{st:.0f} ms"))
+                p.setPen(self.fg2 if not opening else GREEN)
+                p.setFont(font(11, QFont.DemiBold))
+                p.drawText(QRectF(right - 70, row.top(), 70, rh), Qt.AlignRight | Qt.AlignVCenter, lat)
+                right -= 76
+            p.setPen(self.fg)
+            p.setFont(font(13, QFont.DemiBold))
+            fm = QFontMetricsF(p.font())
+            nw = min(fm.horizontalAdvance(name), right - tx)
+            elide(p, name, QRectF(tx, row.top(), nw + 1, rh))
+            if size != "small" and right - tx - nw > 40:
+                p.setPen(self.fg2)
+                p.setFont(font(12))
+                elide(p, ssh.target(q), QRectF(tx + nw + 8, row.top(), right - tx - nw - 8, rh))
+        if len(profiles) > rows:
+            p.setPen(self.fg2)
+            p.setFont(font(11, QFont.DemiBold))
+            p.drawText(QRectF(x, r.bottom() - 20, r.width() - 32, 14), Qt.AlignRight, f"+ {len(profiles) - rows} more")
+
+
+KINDS = [Clock, Calendar, Weather, Music, System, Notes, Photos, Reminders, SSH]
 BY_ID = {k.id: k for k in KINDS}
