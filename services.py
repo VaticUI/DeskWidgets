@@ -55,17 +55,17 @@ def http():
 #  Weather (Open-Meteo: free, no API key)
 # --------------------------------------------------------------------------- #
 WMO = {
-    0: ("Ciel dégagé", "☀️", "🌙"), 1: ("Peu nuageux", "🌤️", "🌙"), 2: ("Partiellement nuageux", "⛅", "☁️"),
-    3: ("Couvert", "☁️", "☁️"), 45: ("Brouillard", "🌫️", "🌫️"), 48: ("Brouillard givrant", "🌫️", "🌫️"),
-    51: ("Bruine légère", "🌦️", "🌧️"), 53: ("Bruine", "🌦️", "🌧️"), 55: ("Bruine forte", "🌧️", "🌧️"),
-    56: ("Bruine verglaçante", "🌧️", "🌧️"), 57: ("Bruine verglaçante", "🌧️", "🌧️"),
-    61: ("Pluie faible", "🌦️", "🌧️"), 63: ("Pluie", "🌧️", "🌧️"), 65: ("Forte pluie", "🌧️", "🌧️"),
-    66: ("Pluie verglaçante", "🌧️", "🌧️"), 67: ("Pluie verglaçante", "🌧️", "🌧️"),
-    71: ("Neige faible", "🌨️", "🌨️"), 73: ("Neige", "🌨️", "🌨️"), 75: ("Forte neige", "❄️", "❄️"),
-    77: ("Grains de neige", "🌨️", "🌨️"), 80: ("Averses", "🌦️", "🌧️"), 81: ("Averses", "🌧️", "🌧️"),
-    82: ("Fortes averses", "🌧️", "🌧️"), 85: ("Averses de neige", "🌨️", "🌨️"),
-    86: ("Averses de neige", "🌨️", "🌨️"), 95: ("Orage", "⛈️", "⛈️"), 96: ("Orage et grêle", "⛈️", "⛈️"),
-    99: ("Orage et grêle", "⛈️", "⛈️"),
+    0: ("Clear", "☀️", "🌙"), 1: ("Mostly clear", "🌤️", "🌙"), 2: ("Partly cloudy", "⛅", "☁️"),
+    3: ("Cloudy", "☁️", "☁️"), 45: ("Fog", "🌫️", "🌫️"), 48: ("Freezing fog", "🌫️", "🌫️"),
+    51: ("Light drizzle", "🌦️", "🌧️"), 53: ("Drizzle", "🌦️", "🌧️"), 55: ("Heavy drizzle", "🌧️", "🌧️"),
+    56: ("Freezing drizzle", "🌧️", "🌧️"), 57: ("Freezing drizzle", "🌧️", "🌧️"),
+    61: ("Light rain", "🌦️", "🌧️"), 63: ("Rain", "🌧️", "🌧️"), 65: ("Heavy rain", "🌧️", "🌧️"),
+    66: ("Freezing rain", "🌧️", "🌧️"), 67: ("Freezing rain", "🌧️", "🌧️"),
+    71: ("Light snow", "🌨️", "🌨️"), 73: ("Snow", "🌨️", "🌨️"), 75: ("Heavy snow", "❄️", "❄️"),
+    77: ("Snow grains", "🌨️", "🌨️"), 80: ("Showers", "🌦️", "🌧️"), 81: ("Showers", "🌧️", "🌧️"),
+    82: ("Heavy showers", "🌧️", "🌧️"), 85: ("Snow showers", "🌨️", "🌨️"),
+    86: ("Snow showers", "🌨️", "🌨️"), 95: ("Thunderstorm", "⛈️", "⛈️"), 96: ("Thunderstorm, hail", "⛈️", "⛈️"),
+    99: ("Thunderstorm, hail", "⛈️", "⛈️"),
 }
 
 
@@ -107,15 +107,15 @@ class Weather(QObject):
         def work():
             if city:
                 r = http().get("https://geocoding-api.open-meteo.com/v1/search",
-                               params={"name": city, "count": 1, "language": "fr"}, timeout=10).json()
+                               params={"name": city, "count": 1, "language": "en"}, timeout=10).json()
                 if not r.get("results"):
-                    raise RuntimeError("Ville introuvable")
+                    raise RuntimeError("City not found")
                 g = r["results"][0]
                 name, lat, lon = g["name"], g["latitude"], g["longitude"]
             else:
                 g = http().get("https://ipwho.is/", timeout=10).json()
                 if not g.get("success", True):
-                    raise RuntimeError("Position inconnue")
+                    raise RuntimeError("Unknown location")
                 name, lat, lon = g["city"], g["latitude"], g["longitude"]
             f = http().get("https://api.open-meteo.com/v1/forecast", params={
                 "latitude": lat, "longitude": lon, "timezone": "auto", "forecast_days": 7,
@@ -128,7 +128,7 @@ class Weather(QObject):
         def done(r, err):
             self.busy.discard(city)
             if err is not None:
-                self.errors[city] = str(err) if isinstance(err, RuntimeError) else "Hors ligne"
+                self.errors[city] = str(err) if isinstance(err, RuntimeError) else "Offline"
             else:
                 self.errors.pop(city, None)
                 self.data[city] = r
@@ -149,7 +149,7 @@ def pretty_app_name(aumid):
         name = name[:-4]
     known = {"chrome": "Chrome", "msedge": "Edge", "firefox": "Firefox", "spotify": "Spotify",
              "opera": "Opera", "brave": "Brave", "vlc": "VLC", "deezer": "Deezer", "notchisland": "NotchIsland",
-             "zunemusic": "Lecteur multimédia", "applemusic": "Apple Music", "discord": "Discord"}
+             "zunemusic": "Media Player", "applemusic": "Apple Music", "discord": "Discord"}
     for k, v in known.items():
         if k in name.lower():
             return v

@@ -21,7 +21,7 @@ import core
 import services
 from core import font, emoji_font, elide, rounded_path
 
-FR = QLocale(QLocale.French, QLocale.France)
+EN = QLocale(QLocale.English, QLocale.UnitedStates)
 RED = QColor(255, 69, 58)
 ORANGE = QColor(255, 159, 10)
 GREEN = QColor(48, 209, 88)
@@ -120,13 +120,13 @@ class Kind:
 #  Clock
 # --------------------------------------------------------------------------- #
 CITIES = [
-    ("local", "Heure locale"), ("Europe/Paris", "Paris"), ("Europe/London", "Londres"),
-    ("Europe/Berlin", "Berlin"), ("Europe/Moscow", "Moscou"), ("America/New_York", "New York"),
-    ("America/Chicago", "Chicago"), ("America/Los_Angeles", "Los Angeles"), ("America/Montreal", "Montréal"),
-    ("America/Sao_Paulo", "São Paulo"), ("America/Martinique", "Martinique"), ("Indian/Reunion", "La Réunion"),
+    ("local", "Local time"), ("Europe/Paris", "Paris"), ("Europe/London", "London"),
+    ("Europe/Berlin", "Berlin"), ("Europe/Moscow", "Moscow"), ("America/New_York", "New York"),
+    ("America/Chicago", "Chicago"), ("America/Los_Angeles", "Los Angeles"), ("America/Montreal", "Montreal"),
+    ("America/Sao_Paulo", "São Paulo"), ("America/Martinique", "Martinique"), ("Indian/Reunion", "Réunion"),
     ("Pacific/Tahiti", "Tahiti"), ("Africa/Casablanca", "Casablanca"), ("Africa/Johannesburg", "Johannesburg"),
-    ("Asia/Dubai", "Dubaï"), ("Asia/Kolkata", "Mumbai"), ("Asia/Singapore", "Singapour"),
-    ("Asia/Shanghai", "Pékin"), ("Asia/Tokyo", "Tokyo"), ("Australia/Sydney", "Sydney"),
+    ("Asia/Dubai", "Dubai"), ("Asia/Kolkata", "Mumbai"), ("Asia/Singapore", "Singapore"),
+    ("Asia/Shanghai", "Beijing"), ("Asia/Tokyo", "Tokyo"), ("Australia/Sydney", "Sydney"),
     ("Pacific/Auckland", "Auckland"),
 ]
 CITY_NAMES = dict(CITIES)
@@ -185,18 +185,18 @@ def draw_dial(p, c: QPointF, R, now, dark, numbers=True):
 
 class Clock(Kind):
     id = "clock"
-    title = "Horloge"
-    desc = "L'heure ici ou ailleurs, en aiguilles ou en chiffres. Le format moyen montre quatre villes."
+    title = "Clock"
+    desc = "The time here or anywhere, analog or digital. The medium size shows four cities."
     icon = "🕒"
     sizes = ("small", "medium")
     defaults = {"city": "local", "style": "analog", "city1": "local", "city2": "America/New_York",
                 "city3": "Asia/Tokyo", "city4": "Australia/Sydney"}
 
     def settings_fields(self):
-        return [("style", "Style (petit)", "choice", [("analog", "Aiguilles"), ("digital", "Numérique")]),
-                ("city", "Ville (petit)", "choice", CITIES),
-                ("city1", "Ville 1 (moyen)", "choice", CITIES), ("city2", "Ville 2 (moyen)", "choice", CITIES),
-                ("city3", "Ville 3 (moyen)", "choice", CITIES), ("city4", "Ville 4 (moyen)", "choice", CITIES)]
+        return [("style", "Style (small)", "choice", [("analog", "Analog"), ("digital", "Digital")]),
+                ("city", "City (small)", "choice", CITIES),
+                ("city1", "City 1 (medium)", "choice", CITIES), ("city2", "City 2 (medium)", "choice", CITIES),
+                ("city3", "City 3 (medium)", "choice", CITIES), ("city4", "City 4 (medium)", "choice", CITIES)]
 
     def paint(self, p, r, size):
         if size == "small":
@@ -212,7 +212,7 @@ class Clock(Kind):
                 p.setPen(self.fg2)
                 p.setFont(font(14, QFont.DemiBold))
                 p.drawText(QRectF(r.left(), r.top() + 108, r.width(), 22), Qt.AlignCenter,
-                           cap(FR.toString(QDate(now.year, now.month, now.day), "dddd d MMMM")))
+                           cap(EN.toString(QDate(now.year, now.month, now.day), "dddd, MMMM d")))
                 # seconds as a thin progress line
                 w = (r.width() - 40) * now.second / 60
                 p.setPen(Qt.NoPen)
@@ -243,7 +243,7 @@ class Clock(Kind):
                 elide(p, city_label(tz), QRectF(c.x() - cw / 2 + 4, r.top() + 108, cw - 8, 18), Qt.AlignCenter)
                 days = (now.date() - local.date()).days
                 diff = round((now - local).total_seconds() / 3600)
-                day = {0: "Aujourd'hui", 1: "Demain", -1: "Hier"}.get(days, "")
+                day = {0: "Today", 1: "Tomorrow", -1: "Yesterday"}.get(days, "")
                 p.setPen(self.fg2)
                 p.setFont(font(11))
                 p.drawText(QRectF(c.x() - cw / 2, r.top() + 126, cw, 16), Qt.AlignCenter, day)
@@ -257,7 +257,7 @@ class Clock(Kind):
 def draw_month(p, r: QRectF, today: datetime.date, fg, fg2, big=False):
     first = today.replace(day=1)
     start = first - datetime.timedelta(days=first.weekday())
-    head = ["L", "M", "M", "J", "V", "S", "D"]
+    head = ["M", "T", "W", "T", "F", "S", "S"]
     cw = r.width() / 7
     top = r.top()
     hh = 22 if big else 16
@@ -286,8 +286,8 @@ def draw_month(p, r: QRectF, today: datetime.date, fg, fg2, big=False):
 
 class Calendar(Kind):
     id = "calendar"
-    title = "Calendrier"
-    desc = "La date du jour et le mois en cours."
+    title = "Calendar"
+    desc = "Today's date and the current month."
     icon = "📅"
     interval = 30_000
 
@@ -298,30 +298,30 @@ class Calendar(Kind):
             p.setPen(RED)
             p.setFont(font(15, QFont.Bold))
             p.drawText(QRectF(r.left() + 20, r.top() + 16, r.width() - 40, 22), Qt.AlignLeft,
-                       FR.toString(qd, "MMMM").upper())
+                       EN.toString(qd, "MMMM").upper())
             p.setPen(self.fg2)
             p.drawText(QRectF(r.left() + 20, r.top() + 16, r.width() - 40, 22), Qt.AlignRight, str(today.year))
             p.setPen(self.fg)
             p.setFont(font(24, QFont.DemiBold))
             p.drawText(QRectF(r.left() + 20, r.top() + 40, r.width() - 40, 34), Qt.AlignLeft,
-                       cap(FR.toString(qd, "dddd d")))
+                       cap(EN.toString(qd, "dddd d")))
             draw_month(p, QRectF(r.left() + 14, r.top() + 90, r.width() - 28, r.height() - 106), today,
                        self.fg, self.fg2, big=True)
             return
         left = QRectF(r.left(), r.top(), 170, r.height())
         p.setPen(RED)
         p.setFont(font(13, QFont.Bold))
-        p.drawText(QRectF(left.left() + 18, left.top() + 16, 140, 18), Qt.AlignLeft, FR.toString(qd, "dddd").upper())
+        p.drawText(QRectF(left.left() + 18, left.top() + 16, 140, 18), Qt.AlignLeft, EN.toString(qd, "dddd").upper())
         p.setPen(self.fg)
         p.setFont(font(64, QFont.Light))
         p.drawText(QRectF(left.left() + 14, left.top() + 30, 150, 80), Qt.AlignLeft | Qt.AlignVCenter, str(today.day))
         p.setPen(self.fg2)
         p.setFont(font(13, QFont.DemiBold))
         p.drawText(QRectF(left.left() + 18, left.top() + 112, 140, 18), Qt.AlignLeft,
-                   cap(FR.toString(qd, "MMMM yyyy")))
+                   cap(EN.toString(qd, "MMMM yyyy")))
         p.setFont(font(12))
         p.drawText(QRectF(left.left() + 18, left.top() + 132, 140, 18), Qt.AlignLeft,
-                   f"Semaine {today.isocalendar()[1]} · jour {today.timetuple().tm_yday}")
+                   f"Week {today.isocalendar()[1]} · day {today.timetuple().tm_yday}")
         if size == "medium":
             draw_month(p, QRectF(r.left() + 176, r.top() + 16, r.width() - 192, r.height() - 30), today,
                        self.fg, self.fg2)
@@ -345,8 +345,8 @@ def sky(code, day):
 
 class Weather(Kind):
     id = "weather"
-    title = "Météo"
-    desc = "Température, conditions et prévisions heure par heure et sur la semaine (Open-Meteo)."
+    title = "Weather"
+    desc = "Temperature, conditions, and hourly and daily forecasts (Open-Meteo)."
     icon = "🌤️"
     interval = 60_000
     defaults = {"city": ""}
@@ -366,7 +366,7 @@ class Weather(Kind):
         return QColor(255, 255, 255, 190)
 
     def settings_fields(self):
-        return [("city", "Ville", "text", "Automatique (selon votre connexion)")]
+        return [("city", "City", "text", "Automatic (from your connection)")]
 
     def settings_changed(self):
         self.svc.get(self.s["city"])
@@ -391,7 +391,7 @@ class Weather(Kind):
             p.setPen(self.fg2)
             p.setFont(font(13))
             err = self.svc.error(self.s["city"])
-            p.drawText(r, Qt.AlignCenter | Qt.TextWordWrap, err or "Chargement…")
+            p.drawText(r, Qt.AlignCenter | Qt.TextWordWrap, err or "Loading…")
             return
         f = d["f"]
         cur = f["current"]
@@ -412,7 +412,7 @@ class Weather(Kind):
             p.setFont(font(13, QFont.DemiBold))
             elide(p, label, QRectF(x, y + 112, r.width() - 32, 18))
             p.setPen(self.fg2)
-            p.drawText(QRectF(x, y + 130, r.width() - 32, 18), Qt.AlignLeft, f"H : {hi}°  B : {lo}°")
+            p.drawText(QRectF(x, y + 130, r.width() - 32, 18), Qt.AlignLeft, f"H:{hi}°  L:{lo}°")
             return
         # right side of the header
         rx = r.right() - 16
@@ -422,7 +422,7 @@ class Weather(Kind):
         p.setFont(font(13, QFont.DemiBold))
         p.drawText(QRectF(rx - 200, y + 32, 200, 18), Qt.AlignRight, label)
         p.setPen(self.fg2)
-        p.drawText(QRectF(rx - 200, y + 50, 200, 18), Qt.AlignRight, f"H : {hi}°  B : {lo}°")
+        p.drawText(QRectF(rx - 200, y + 50, 200, 18), Qt.AlignRight, f"H:{hi}°  L:{lo}°")
         # hourly
         hourly = f["hourly"]
         now = datetime.datetime.now().strftime("%Y-%m-%dT%H:00")
@@ -438,7 +438,7 @@ class Weather(Kind):
             if j >= len(hourly["time"]):
                 break
             cx = r.left() + 12 + cw * i
-            hour = "Maint." if i == 0 else hourly["time"][j][11:13] + " h"
+            hour = "Now" if i == 0 else hourly["time"][j][11:16]
             p.setPen(self.fg2)
             p.setFont(font(11, QFont.DemiBold))
             p.drawText(QRectF(cx, top, cw, 16), Qt.AlignCenter, hour)
@@ -461,7 +461,7 @@ class Weather(Kind):
         for i in range(days):
             ry = r.top() + 174 + i * rh
             dd = datetime.date.fromisoformat(daily["time"][i])
-            name = "Auj." if i == 0 else cap(FR.toString(QDate(dd.year, dd.month, dd.day), "ddd").rstrip("."))
+            name = "Today" if i == 0 else cap(EN.toString(QDate(dd.year, dd.month, dd.day), "ddd").rstrip("."))
             p.setPen(self.fg)
             p.setFont(font(13, QFont.DemiBold))
             p.drawText(QRectF(r.left() + 16, ry, 60, rh), Qt.AlignLeft | Qt.AlignVCenter, name)
@@ -537,8 +537,8 @@ def draw_icon(p, name, c: QPointF, s, color):
 
 class Music(Kind):
     id = "music"
-    title = "Musique"
-    desc = "Ce qui joue en ce moment (Spotify, YouTube, NotchIsland…), avec les commandes."
+    title = "Music"
+    desc = "What's playing right now (Spotify, YouTube, NotchIsland…), with the controls."
     icon = "🎵"
     sizes = ("small", "medium")
 
@@ -624,7 +624,7 @@ class Music(Kind):
                        (i.get("app") or "").upper() if has else "")
             p.setPen(self.fg)
             p.setFont(font(14, QFont.DemiBold))
-            elide(p, i.get("title") if has else "Aucune lecture", QRectF(r.left() + 16, r.top() + 106, r.width() - 32, 20))
+            elide(p, i.get("title") if has else "Not playing", QRectF(r.left() + 16, r.top() + 106, r.width() - 32, 20))
             p.setPen(self.fg2)
             p.setFont(font(13))
             elide(p, i.get("artist", "") if has else "", QRectF(r.left() + 16, r.top() + 126, r.width() - 32, 18))
@@ -635,13 +635,13 @@ class Music(Kind):
         w = r.right() - 16 - x
         p.setPen(self.fg2)
         p.setFont(font(11, QFont.DemiBold))
-        p.drawText(QRectF(x, r.top() + 18, w, 16), Qt.AlignLeft, (i.get("app") or "").upper() if has else "MUSIQUE")
+        p.drawText(QRectF(x, r.top() + 18, w, 16), Qt.AlignLeft, (i.get("app") or "").upper() if has else "MUSIC")
         p.setPen(self.fg)
         p.setFont(font(16, QFont.DemiBold))
-        elide(p, i.get("title") if has else "Aucune lecture", QRectF(x, r.top() + 36, w, 22))
+        elide(p, i.get("title") if has else "Not playing", QRectF(x, r.top() + 36, w, 22))
         p.setPen(self.fg2)
         p.setFont(font(13))
-        elide(p, i.get("artist", "") if has else "Lancez de la musique dans une appli", QRectF(x, r.top() + 58, w, 18))
+        elide(p, i.get("artist", "") if has else "Play some music in any app", QRectF(x, r.top() + 58, w, 18))
         if not has:
             return
         dur = i.get("duration", 0)
@@ -669,11 +669,11 @@ class Music(Kind):
 #  System
 # --------------------------------------------------------------------------- #
 def fmt_rate(b):
-    for unit in ("o/s", "Ko/s", "Mo/s", "Go/s"):
+    for unit in ("B/s", "KB/s", "MB/s", "GB/s"):
         if b < 1000:
-            return f"{b:.0f} {unit}" if unit == "o/s" else f"{b:.1f} {unit}"
+            return f"{b:.0f} {unit}" if unit == "B/s" else f"{b:.1f} {unit}"
         b /= 1024
-    return f"{b:.1f} To/s"
+    return f"{b:.1f} TB/s"
 
 
 def ring(p, c, R, frac, color, width, track):
@@ -687,8 +687,8 @@ def ring(p, c, R, frac, color, width, track):
 
 class System(Kind):
     id = "system"
-    title = "Système"
-    desc = "Processeur, mémoire, disque et réseau en direct."
+    title = "System"
+    desc = "Live CPU, memory, disk and network usage."
     icon = "📊"
     sizes = ("small", "medium")
     interval = 2000
@@ -699,12 +699,12 @@ class System(Kind):
 
     def items(self):
         v = self.svc.values
-        out = [("CPU", v["cpu"], GREEN, f"{v['cpu'] * 100:.0f}%", "Processeur"),
-               ("RAM", v["ram"], BLUE, f"{v['ram'] * 100:.0f}%", f"{v['ram_used']:.1f} / {v['ram_total']:.0f} Go"),
-               ("C:", v["disk"], ORANGE, f"{v['disk'] * 100:.0f}%", f"{v['disk_free']:.0f} Go libres")]
+        out = [("CPU", v["cpu"], GREEN, f"{v['cpu'] * 100:.0f}%", f"{self.svc.ps.cpu_count()} threads"),
+               ("RAM", v["ram"], BLUE, f"{v['ram'] * 100:.0f}%", f"{v['ram_used']:.1f} / {v['ram_total']:.0f} GB"),
+               ("C:", v["disk"], ORANGE, f"{v['disk'] * 100:.0f}%", f"{v['disk_free']:.0f} GB free")]
         if v["battery"] is not None:
             b, plugged = v["battery"]
-            out.append(("BAT", b, GREEN if b > 0.2 else RED, f"{b * 100:.0f}%", "Secteur" if plugged else "Batterie"))
+            out.append(("BAT", b, GREEN if b > 0.2 else RED, f"{b * 100:.0f}%", "Plugged in" if plugged else "On battery"))
         return out
 
     def paint(self, p, r, size):
@@ -746,7 +746,7 @@ class System(Kind):
                 p.drawText(QRectF(cx - 34, c.y() - 11, 68, 22), Qt.AlignCenter, val)
                 p.setFont(font(13, QFont.DemiBold))
                 p.drawText(QRectF(cx - cw / 2, r.top() + 110, cw, 18), Qt.AlignCenter,
-                           {"CPU": "Processeur", "RAM": "Mémoire", "C:": "Disque C:", "BAT": "Batterie"}[name])
+                           {"CPU": "Processor", "RAM": "Memory", "C:": "Disk C:", "BAT": "Battery"}[name])
                 p.setPen(self.fg2)
                 p.setFont(font(11))
                 elide(p, sub, QRectF(cx - cw / 2 + 2, r.top() + 128, cw - 4, 16), Qt.AlignCenter)
@@ -761,7 +761,7 @@ class System(Kind):
                 p.drawText(QRectF(cx - 36, c.y() + 1, 72, 16), Qt.AlignCenter, "↑ " + fmt_rate(v["up"]))
                 p.setPen(self.fg)
                 p.setFont(font(13, QFont.DemiBold))
-                p.drawText(QRectF(cx - cw / 2, r.top() + 110, cw, 18), Qt.AlignCenter, "Réseau")
+                p.drawText(QRectF(cx - cw / 2, r.top() + 110, cw, 18), Qt.AlignCenter, "Network")
 
 
 # --------------------------------------------------------------------------- #
@@ -770,17 +770,17 @@ class System(Kind):
 class Notes(Kind):
     id = "notes"
     title = "Notes"
-    desc = "Un pense-bête modifiable directement sur le bureau : cliquez pour écrire."
+    desc = "A sticky note you edit right on the desktop: click to write."
     icon = "📝"
-    defaults = {"text": "Ma note\nCliquez ici pour écrire.", "color": "yellow"}
+    defaults = {"text": "My note\nClick here to write.", "color": "yellow"}
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.editor = None
 
     def settings_fields(self):
-        return [("color", "Couleur", "choice", [("yellow", "Jaune"), ("glass", "Verre"), ("pink", "Rose"),
-                                                ("green", "Vert"), ("blue", "Bleu")])]
+        return [("color", "Color", "choice", [("yellow", "Yellow"), ("glass", "Glass"), ("pink", "Pink"),
+                                                ("green", "Green"), ("blue", "Blue")])]
 
     COLORS = {"yellow": (QColor(255, 231, 128), QColor(254, 214, 90)),
               "pink": (QColor(255, 190, 206), QColor(252, 160, 186)),
@@ -815,7 +815,7 @@ class Notes(Kind):
         title, body = lines[0], "\n".join(lines[1:]).strip()
         p.setPen(self.fg)
         p.setFont(font(16, QFont.Bold))
-        elide(p, title or "Nouvelle note", QRectF(r.left() + 16, r.top() + 14, r.width() - 32, 22))
+        elide(p, title or "New note", QRectF(r.left() + 16, r.top() + 14, r.width() - 32, 22))
         p.setPen(self.fg2 if not body else self.fg)
         p.setFont(font(13))
         p.drawText(QRectF(r.left() + 16, r.top() + 42, r.width() - 32, r.height() - 56),
@@ -884,7 +884,7 @@ def default_pictures():
 class Photos(Kind):
     id = "photos"
     title = "Photos"
-    desc = "Un diaporama de vos photos. Double-cliquez pour ouvrir la photo affichée."
+    desc = "A slideshow of your photos. Double-click to open the photo shown."
     icon = "🖼️"
     interval = 30_000
     defaults = {"folder": default_pictures, "minutes": 10}
@@ -898,7 +898,7 @@ class Photos(Kind):
         self.next_photo()
 
     def settings_fields(self):
-        return [("folder", "Dossier", "folder", None), ("minutes", "Changer toutes les (min)", "int", (1, 1440))]
+        return [("folder", "Folder", "folder", None), ("minutes", "Change every (min)", "int", (1, 1440))]
 
     def settings_changed(self):
         self.next_photo()
@@ -946,7 +946,7 @@ class Photos(Kind):
             p.setPen(self.fg2)
             p.setFont(font(13))
             p.drawText(r.adjusted(14, 0, -14, 0), Qt.AlignCenter | Qt.TextWordWrap,
-                       "Chargement…" if self.loading else "Aucune photo.\nClic droit → Modifier « Photos »")
+                       "Loading…" if self.loading else "No photos.\nRight-click → Edit \"Photos\"")
             return
         iw, ih = self.img.width(), self.img.height()
         scale = max(r.width() / iw, r.height() / ih)
@@ -966,11 +966,11 @@ class Photos(Kind):
 # --------------------------------------------------------------------------- #
 class Reminders(Kind):
     id = "reminders"
-    title = "Rappels"
-    desc = "Une liste de choses à faire : cochez pour terminer, « + » pour ajouter."
+    title = "Reminders"
+    desc = "A to-do list: tick to complete, \"+\" to add."
     icon = "✅"
-    defaults = {"items": lambda: [{"text": "Faire les courses", "done": False},
-                                  {"text": "Appeler le garage", "done": False}]}
+    defaults = {"items": lambda: [{"text": "Buy groceries", "done": False},
+                                  {"text": "Call the garage", "done": False}]}
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -1007,7 +1007,7 @@ class Reminders(Kind):
             p.drawText(plus.adjusted(0, -2, 0, -2), Qt.AlignCenter, "+")
         p.setPen(ORANGE)
         p.setFont(font(15, QFont.Bold))
-        p.drawText(QRectF(x, r.top() + 48, r.width() - 32, 20), Qt.AlignLeft, "Rappels")
+        p.drawText(QRectF(x, r.top() + 48, r.width() - 32, 20), Qt.AlignLeft, "Reminders")
         # rows
         top = r.top() + 76
         rh = 26
@@ -1039,11 +1039,11 @@ class Reminders(Kind):
             p.setPen(self.fg2)
             p.setFont(font(13))
             p.drawText(QRectF(x, top, r.width() - 32, rh), Qt.AlignLeft | Qt.AlignVCenter,
-                       "Tout est fait 🎉" if size == "small" else "Tout est fait 🎉  « + » pour ajouter")
+                       "All done 🎉" if size == "small" else "All done 🎉  \"+\" to add one")
         elif len(todo) > max_rows:
             p.setPen(self.fg2)
             p.setFont(font(11, QFont.DemiBold))
-            p.drawText(QRectF(x, r.bottom() - 22, r.width() - 32, 14), Qt.AlignRight, f"+ {len(todo) - max_rows} autres")
+            p.drawText(QRectF(x, r.bottom() - 22, r.width() - 32, 14), Qt.AlignRight, f"+ {len(todo) - max_rows} more")
 
     def on_hit(self, name):
         if self.preview:
@@ -1067,7 +1067,7 @@ class Reminders(Kind):
     def open_input(self):
         if self.input is None:
             self.input = QLineEdit(self.host)
-            self.input.setPlaceholderText("Nouveau rappel")
+            self.input.setPlaceholderText("New reminder")
             self.input.returnPressed.connect(self._add)
             self.input.editingFinished.connect(lambda: QTimer.singleShot(0, self._close_input))
         self.layout_children(self.host.card_rect(), self.host.size_name)

@@ -26,7 +26,7 @@ CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 
 # card sizes, in the proportions of macOS widgets
 SIZES = {"small": (170, 170), "medium": (364, 170), "large": (364, 384)}
-SIZE_NAMES = {"small": "Petit", "medium": "Moyen", "large": "Grand"}
+SIZE_NAMES = {"small": "Small", "medium": "Medium", "large": "Large"}
 RADIUS = 22
 MARGIN = 16          # room around the card for the shadow
 GAP = 16             # space between widgets when snapping
@@ -365,7 +365,7 @@ class SettingsDialog(QDialog):
         ok = QPushButton("OK")
         ok.setDefault(True)
         ok.clicked.connect(self.accept)
-        cancel = QPushButton("Annuler")
+        cancel = QPushButton("Cancel")
         cancel.clicked.connect(self.reject)
         row = QHBoxLayout()
         row.addStretch(1)
@@ -377,7 +377,7 @@ class SettingsDialog(QDialog):
         v.addLayout(row)
 
     def _pick(self, ed):
-        d = QFileDialog.getExistingDirectory(self, "Choisir un dossier", ed.text())
+        d = QFileDialog.getExistingDirectory(self, "Choose a folder", ed.text())
         if d:
             ed.setText(os.path.normpath(d))
 
@@ -561,11 +561,11 @@ class WidgetWindow(QWidget):
                 m.addAction(a)
             m.addSeparator()
         if self.kind.settings_fields():
-            a = m.addAction(f"Modifier « {self.kind.title} »…")
+            a = m.addAction(f"Edit \"{self.kind.title}\"…")
             a.triggered.connect(self.edit_settings)
-        m.addAction("Supprimer le widget").triggered.connect(lambda: self.manager.remove(self))
+        m.addAction("Remove widget").triggered.connect(lambda: self.manager.remove(self))
         m.addSeparator()
-        m.addAction("Modifier les widgets…").triggered.connect(self.manager.open_gallery)
+        m.addAction("Edit widgets…").triggered.connect(self.manager.open_gallery)
         m.exec(e.globalPos())
 
     def set_size(self, s):

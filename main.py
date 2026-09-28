@@ -1,7 +1,7 @@
 """
 DeskWidgets — macOS-style widgets on the Windows desktop.
 
-Right-click the tray icon (or a widget) → "Modifier les widgets…" to open the gallery.
+Right-click the tray icon (or a widget) → "Edit widgets…" to open the gallery.
 """
 
 import os
@@ -182,14 +182,14 @@ def main():
     tray.setToolTip("DeskWidgets")
     menu = QMenu()
     menu.setStyleSheet(core.menu_qss())
-    menu.addAction("Modifier les widgets…").triggered.connect(manager.open_gallery)
+    menu.addAction("Edit widgets…").triggered.connect(manager.open_gallery)
     menu.addSeparator()
-    auto = QAction("Lancer au démarrage de Windows", menu, checkable=True)
+    auto = QAction("Launch at Windows startup", menu, checkable=True)
     auto.setChecked(autostart_enabled())
     auto.toggled.connect(set_autostart)
     menu.addAction(auto)
     menu.addSeparator()
-    menu.addAction("Quitter").triggered.connect(app.quit)
+    menu.addAction("Quit").triggered.connect(app.quit)
     core.theme.changed.connect(lambda: menu.setStyleSheet(core.menu_qss()))
     tray.setContextMenu(menu)
     tray.activated.connect(lambda r: manager.open_gallery() if r == QSystemTrayIcon.Trigger else None)

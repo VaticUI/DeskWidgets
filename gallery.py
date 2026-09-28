@@ -27,7 +27,7 @@ class PreviewCard(QWidget):
         w, h = SIZES[size]
         self.setFixedSize(int((w + 2 * MARGIN) * SCALE), int((h + 2 * MARGIN) * SCALE) + 26)
         self.setCursor(Qt.PointingHandCursor)
-        self.setToolTip(f"Ajouter « {kind_cls.title} » ({SIZE_NAMES[size].lower()})")
+        self.setToolTip(f"Add \"{kind_cls.title}\" ({SIZE_NAMES[size].lower()})")
 
     def paintEvent(self, _):
         p = QPainter(self)
@@ -82,7 +82,7 @@ class Gallery(QWidget):
 
         left = QVBoxLayout()
         self.search = QLineEdit()
-        self.search.setPlaceholderText("Rechercher des widgets")
+        self.search.setPlaceholderText("Search widgets")
         self.search.textChanged.connect(self.fill_list)
         left.addWidget(self.search)
         self.list = QListWidget()
@@ -108,11 +108,11 @@ class Gallery(QWidget):
         right.addLayout(self.cards_row)
         right.addStretch(1)
         bottom = QHBoxLayout()
-        hint = QLabel("Cliquez sur un aperçu pour l'ajouter · faites glisser les widgets pour les déplacer · "
-                      "clic droit sur un widget pour sa taille et ses réglages")
+        hint = QLabel("Click a preview to add it · drag widgets to move them · "
+                      "right-click a widget for its size and settings")
         hint.setObjectName("desc")
         hint.setWordWrap(True)
-        done = QPushButton("Terminé")
+        done = QPushButton("Done")
         done.setCursor(Qt.PointingHandCursor)
         done.clicked.connect(self.hide)
         bottom.addWidget(hint, 1)
