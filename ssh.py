@@ -240,15 +240,21 @@ class ProfilesDialog(QDialog):
         self.refresh(0)
 
     def refresh(self, select):
+        if not self.profiles:
+            # always something to fill in: an empty list starts with a blank server
+            self.profiles.append(new_profile())
         self.list.blockSignals(True)
         self.list.clear()
         for p in self.profiles:
             self.list.addItem(p["name"] or p["host"] or "(new server)")
         self.list.blockSignals(False)
-        self.form.setEnabled(bool(self.profiles))
-        if self.profiles:
-            self.list.setCurrentRow(max(0, min(select, len(self.profiles) - 1)))
-            self.show_profile(self.list.currentRow())
+        self.list.setCurrentRow(max(0, min(select, len(self.profiles) - 1)))
+        self.show_profile(self.list.currentRow())
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self.activateWindow()
+        (self.host if self.name.text() else self.name).setFocus()
 
     def show_profile(self, i):
         if not (0 <= i < len(self.profiles)):
