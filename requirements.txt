@@ -1,0 +1,9 @@
+PySide6-Essentials
+psutil
+requests
+tzdata
+winrt-runtime
+winrt-Windows.Media.Control
+winrt-Windows.Storage.Streams
+winrt-Windows.Foundation
+winrt-Windows.Foundation.Collections
