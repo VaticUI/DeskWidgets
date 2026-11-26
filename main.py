@@ -9,7 +9,7 @@ import sys
 import ctypes
 import winreg
 
-from PySide6.QtCore import Qt, QRect, QRectF, QPoint
+from PySide6.QtCore import Qt, QRect, QRectF, QPoint, QTimer
 from PySide6.QtGui import QPainter, QColor, QPixmap, QIcon, QAction, QGuiApplication
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 
@@ -67,6 +67,61 @@ class Manager:
     # --- placement ------------------------------------------------------ #
     def cards(self, exclude=None):
         return [w.global_card() for w in self.windows if w is not exclude]
+
+    def relayout(self):
+        """Re-fit every widget after the display configuration changed.
+
+        Positions are logical coordinates saved on whatever screen was active when
+        the app last ran. When monitors are (dis)connected — docking a laptop,
+        closing the lid, an external screen becoming the only one — they can end
+        up off-screen or on a screen whose scale changed. Bring each card back
+        inside a real screen and re-apply its fixed size so Qt re-renders it at
+        the right devicePixelRatio.
+        """
+        screens = QGuiApplication.screens()
+        if not screens:
+            return
+        for w in self.windows:
+            try:
+                card = w.global_card()
+                center = QPoint(card.x() + card.width() // 2, card.y() + card.height() // 2)
+                screen = QGuiApplication.screenAt(center)
+                if screen is None:      # card is off-screen: nearest screen by center
+                    screen = min(screens, key=lambda s: (s.geometry().center() - center).manhattanLength())
+                g = screen.availableGeometry()
+                if not g.intersects(card):
+                    lo, hi = g.left() + EDGE, g.right() + 1 - card.width() - EDGE
+                    x = min(max(card.x(), lo), max(lo, hi))
+                    lo, hi = g.top() + EDGE, g.bottom() + 1 - card.height() - EDGE
+                    y = min(max(card.y(), lo), max(lo, hi))
+                    w.apply_size()
+                    w.move(x - MARGIN, y - MARGIN)
+                    w.pin()
+                    w.update()
+                    w.save_pos()
+                else:
+                    # still visible: refresh the fixed size anyway, the screen's
+                    # scale (and so the physical size of the card) may have changed
+                    w.apply_size()
+                    w.pin()
+                    w.update()
+            except RuntimeError:
+                pass        # window already deleted (C++ side gone)
+
+    def watch_displays(self):
+        """React to monitors being connected, removed or becoming primary."""
+        def schedule():
+            self._relayout_timer.start()      # debounce: changes arrive in bursts
+
+        self._relayout_timer = QTimer()
+        self._relayout_timer.setSingleShot(True)
+        self._relayout_timer.setInterval(1500)
+        self._relayout_timer.timeout.connect(self.relayout)
+
+        app = QGuiApplication.instance()
+        app.primaryScreenChanged.connect(schedule)
+        app.screenAdded.connect(schedule)
+        app.screenRemoved.connect(schedule)
 
     def free_spot(self, w, h):
         """First free place, from the top right corner of the main screen (icons live on the left)."""
@@ -156,14 +211,30 @@ def make_icon():
     return QIcon(pm)
 
 
+def set_dpi_awareness():
+    """Per-Monitor V2, the context Qt 6 is built around.
+
+    Plain SetProcessDpiAwareness(2) locks the process into the older v1 context,
+    which Qt handles badly for frameless translucent windows: when a monitor with
+    a different scale connects (docking a laptop), widgets end up with wrong sizes.
+    """
+    try:
+        # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (HANDLE)-4 (user32, Win10 1703+)
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+        return
+    except Exception:
+        pass
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)   # last resort, same as before
+    except Exception:
+        pass
+
+
 def main():
     ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\DeskWidgets_single_instance")
     if ctypes.windll.kernel32.GetLastError() == 183:
         return
-    try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)
-    except Exception:
-        pass
+    set_dpi_awareness()
 
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
@@ -175,6 +246,12 @@ def main():
     if config.first_run:
         for kind, size in (("clock", "small"), ("calendar", "small"), ("weather", "medium")):
             manager.add(kind, size)
+
+    # Monitors can change between sessions (booted on the laptop screen, docked
+    # later): check once that every saved position still lands on a real screen,
+    # and keep following hot-plug display changes from now on.
+    manager.watch_displays()
+    QTimer.singleShot(1000, manager.relayout)
 
     icon = make_icon()
     app.setWindowIcon(icon)
